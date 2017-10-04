@@ -24,10 +24,6 @@ type str = string loc
 type loc = Location.t
 type attrs = attribute list
 
-let rtag ?(attrs=[]) label bool lst = Rtag (label, attrs, bool, lst)
-
-let const_string s = Pconst_string (s, None)
-
 let default_loc = ref Location.none
 
 let with_default_loc l f =
@@ -91,8 +87,7 @@ module Typ = struct
         | Ptyp_constr(longident, lst) ->
             Ptyp_constr(longident, List.map loop lst)
         | Ptyp_object (lst, o) ->
-            Ptyp_object
-              (List.map (fun (s, attrs, t) -> (s, attrs, loop t)) lst, o)
+            Ptyp_object (List.map loop_object_field lst, o)
         | Ptyp_class (longident, lst) ->
             Ptyp_class (longident, List.map loop lst)
         | Ptyp_alias(core_type, string) ->
@@ -117,6 +112,12 @@ module Typ = struct
             Rtag(label,attrs,flag,List.map loop lst)
         | Rinherit t ->
             Rinherit (loop t)
+    and loop_object_field =
+      function
+        | Otag(label, attrs, t) ->
+            Otag(label, attrs, loop t)
+        | Oinherit t ->
+            Oinherit (loop t)
     in
     loop t
 
@@ -290,6 +291,7 @@ module Cl = struct
   let let_ ?loc ?attrs a b c = mk ?loc ?attrs (Pcl_let (a, b, c))
   let constraint_ ?loc ?attrs a b = mk ?loc ?attrs (Pcl_constraint (a, b))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pcl_extension a)
+  let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pcl_open (a, b, c))
 end
 
 module Cty = struct
@@ -305,6 +307,7 @@ module Cty = struct
   let signature ?loc ?attrs a = mk ?loc ?attrs (Pcty_signature a)
   let arrow ?loc ?attrs a b c = mk ?loc ?attrs (Pcty_arrow (a, b, c))
   let extension ?loc ?attrs a = mk ?loc ?attrs (Pcty_extension a)
+  let open_ ?loc ?attrs a b c = mk ?loc ?attrs (Pcty_open (a, b, c))
 end
 
 module Ctf = struct
@@ -556,20 +559,3 @@ module Cstr = struct
      pcstr_fields = fields;
     }
 end
-
-(** merlin: refactored out of Parser *)
-
-type let_binding =
-  { lb_pattern: pattern;
-    lb_expression: expression;
-    lb_attributes: attributes;
-    lb_docs: docs Lazy.t;
-    lb_text: text Lazy.t;
-    lb_loc: Location.t; }
-
-type let_bindings =
-  { lbs_bindings: let_binding list;
-    lbs_rec: rec_flag;
-    lbs_extension: string Asttypes.loc option;
-    lbs_loc: Location.t }
-

@@ -31,38 +31,19 @@ let last = function
   | Lapply(_, _) -> Misc.fatal_error "Longident.last"
 
 let rec split_at_dots s pos =
-  match String.index_from s pos '.' with
-  | dot -> String.sub s pos (dot - pos) :: split_at_dots s (dot + 1)
-  | exception Not_found ->
+  try
+    let dot = String.index_from s pos '.' in
+    String.sub s pos (dot - pos) :: split_at_dots s (dot + 1)
+  with Not_found ->
     [String.sub s pos (String.length s - pos)]
 
-let parse s =
-  match split_at_dots s 0 with
-    [] -> Lident ""  (* should not happen, but don't put assert false
-                        so as not to crash the toplevel (see Genprintval) *)
-  | hd :: tl -> List.fold_left (fun p s -> Ldot(p, s)) (Lident hd) tl
+let unflatten l =
+  match l with
+  | [] -> None
+  | hd :: tl -> Some (List.fold_left (fun p s -> Ldot(p, s)) (Lident hd) tl)
 
-let keep_suffix =
-  let rec aux = function
-    | Lident str ->
-      if String.lowercase str <> str then
-        Some (Lident str, false)
-      else
-        None
-    | Ldot (t, str) ->
-      if String.lowercase str <> str then
-        match aux t with
-        | None -> Some (Lident str, true)
-        | Some (t, is_label) -> Some (Ldot (t, str), is_label)
-      else
-        None
-    | t -> Some (t, false) (* Can be improved... *)
-  in
-  function
-  | Lident s -> Lident s, false
-  | Ldot (t, s) ->
-    begin match aux t with
-    | None -> Lident s, true
-    | Some (t, is_label) -> Ldot (t, s), is_label
-    end
-  | otherwise -> otherwise, false
+let parse s =
+  match unflatten (split_at_dots s 0) with
+  | None -> Lident ""  (* should not happen, but don't put assert false
+                          so as not to crash the toplevel (see Genprintval) *)
+  | Some v -> v

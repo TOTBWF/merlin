@@ -24,10 +24,6 @@ type str = string loc
 type loc = Location.t
 type attrs = attribute list
 
-val const_string : string -> constant
-
-val rtag : ?attrs:attrs -> label -> bool -> core_type list -> row_field
-
 (** {2 Default locations} *)
 
 val default_loc: loc ref
@@ -64,9 +60,8 @@ module Typ :
                -> core_type
     val tuple: ?loc:loc -> ?attrs:attrs -> core_type list -> core_type
     val constr: ?loc:loc -> ?attrs:attrs -> lid -> core_type list -> core_type
-    val object_: ?loc:loc -> ?attrs:attrs ->
-                  (str * attributes * core_type) list -> closed_flag ->
-                  core_type
+    val object_: ?loc:loc -> ?attrs:attrs -> object_field list
+                   -> closed_flag -> core_type
     val class_: ?loc:loc -> ?attrs:attrs -> lid -> core_type list -> core_type
     val alias: ?loc:loc -> ?attrs:attrs -> core_type -> string -> core_type
     val variant: ?loc:loc -> ?attrs:attrs -> row_field list -> closed_flag
@@ -357,6 +352,8 @@ module Cty:
     val arrow: ?loc:loc -> ?attrs:attrs -> arg_label -> core_type ->
       class_type -> class_type
     val extension: ?loc:loc -> ?attrs:attrs -> extension -> class_type
+    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> class_type
+               -> class_type
   end
 
 (** Class type fields *)
@@ -395,6 +392,8 @@ module Cl:
     val constraint_: ?loc:loc -> ?attrs:attrs -> class_expr -> class_type ->
       class_expr
     val extension: ?loc:loc -> ?attrs:attrs -> extension -> class_expr
+    val open_: ?loc:loc -> ?attrs:attrs -> override_flag -> lid -> class_expr
+               -> class_expr
   end
 
 (** Class fields *)
@@ -441,20 +440,3 @@ module Cstr:
   sig
     val mk: pattern -> class_field list -> class_structure
   end
-
-(** merlin: refactored out of Parser *)
-
-type let_binding =
-  { lb_pattern: pattern;
-    lb_expression: expression;
-    lb_attributes: attributes;
-    lb_docs: docs Lazy.t;
-    lb_text: text Lazy.t;
-    lb_loc: Location.t; }
-
-type let_bindings =
-  { lbs_bindings: let_binding list;
-    lbs_rec: rec_flag;
-    lbs_extension: string Asttypes.loc option;
-    lbs_loc: Location.t }
-

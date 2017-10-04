@@ -1856,7 +1856,7 @@ struct
     val empty : t
     (** No variables are accessed in an expression; it might be a
         constant or a global identifier *)
-      
+
     val unguarded : t -> Ident.t list
     (** The list of identifiers that are used in an unguarded context *)
 
@@ -1874,7 +1874,7 @@ struct
         tbl
         Ident.empty
       with Not_found -> assert false
-    
+
     let guard t = map guard t
     let inspect t = map inspect t
     let delay t = map delay t
@@ -1896,14 +1896,14 @@ struct
         x y
 
     let single id access = Ident.add id access Ident.empty
-  
+
     let empty = Ident.empty
 
     let list_matching p t =
       let r = ref [] in
       Ident.iter (fun id v -> if p v then r := id :: !r) t;
       !r
-    
+
     let unguarded =
       list_matching (function Unguarded | Dereferenced -> true | _ -> false)
 
@@ -1919,7 +1919,7 @@ struct
     let empty = Ident.empty
 
     let join x y =
-      let r = 
+      let r =
       Ident.fold_all
         (fun id v tbl ->
            let v' = try Ident.find_same id tbl with Not_found -> Use.empty in
@@ -2023,7 +2023,7 @@ struct
   type sd = Static | Dynamic
 
   let rec classify_expression : Typedtree.expression -> sd =
-    fun exp -> match exp.exp_desc with 
+    fun exp -> match exp.exp_desc with
       | Texp_let (_, _, e)
       | Texp_letmodule (_, _, _, e)
       | Texp_sequence (_, e)
@@ -2082,7 +2082,7 @@ struct
                 (join
                    (inspect (expression env e1))
                    (inspect (expression env e2)))
-                (* The body is evaluated, but not used, and not available 
+                (* The body is evaluated, but not used, and not available
                    for inclusion in another value *)
                 (discard (expression env e3)))
 
@@ -2177,21 +2177,21 @@ struct
         Use.inspect (list field env fields)
       | Texp_function { cases } ->
         Use.delay (list (case ~scrutinee:Use.empty) env cases)
-      | Texp_lazy e ->
-         begin match Typeopt.classify_lazy_argument e with
+      | Texp_lazy e -> expression env e
+         (*begin match Typeopt.classify_lazy_argument e with
          | `Constant_or_function
          | `Identifier _
          | `Float ->
             expression env e
          | `Other ->
             Use.delay (expression env e)
-         end
+         end*)
       | Texp_unreachable ->
         Use.empty
       | Texp_extension_constructor _ ->
         Use.empty
   and option : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a option -> Use.t =
-    fun f env -> Misc.Stdlib.Option.value_default (f env) ~default:Use.empty
+    fun f env opt -> (match opt with Some x -> f env x | None -> Use.empty)
   and list : 'a. (Env.env -> 'a -> Use.t) -> Env.env -> 'a list -> Use.t =
     fun f env ->
       List.fold_left (fun typ item -> Use.join (f env item) typ) Use.empty
@@ -2324,7 +2324,7 @@ struct
         else Use.discard ty (* as in 'let' *)
       in
       let vars = pattern_variables c_lhs in
-      let env = 
+      let env =
         List.fold_left
           (fun env id -> Ident.add id ty env)
           env
@@ -2337,7 +2337,7 @@ struct
     fun rec_flag env bindings ->
       match rec_flag with
       | Recursive ->
-          (* Approximation: 
+          (* Approximation:
                 let rec y =
                   let rec x1 = e1
                       and x2 = e2
@@ -2396,7 +2396,7 @@ struct
     let ty = expression (build_unguarded_env idlist) expr in
     match Use.unguarded ty, Use.dependent ty, classify_expression expr with
     | _ :: _, _, _ (* The expression inspects rec-bound variables *)
-    | _, _ :: _, Dynamic -> (* The expression depends on rec-bound variables 
+    | _, _ :: _, Dynamic -> (* The expression depends on rec-bound variables
                                and its size is unknown *)
         raise(Error(expr.exp_loc, env, Illegal_letrec_expr))
     | [], _, Static (* The expression has known size *)
@@ -4074,8 +4074,8 @@ and type_format loc str env =
           mk_constr "Ignored_int64" [ mk_iconv iconv; mk_int_opt pad_opt ]
         | Ignored_float (pad_opt, prec_opt) ->
           mk_constr "Ignored_float" [ mk_int_opt pad_opt; mk_int_opt prec_opt ]
-        | Ignored_bool ->
-          mk_constr "Ignored_bool" []
+        | Ignored_bool pad_opt ->
+          mk_constr "Ignored_bool" [ mk_int_opt pad_opt ]
         | Ignored_format_arg (pad_opt, fmtty) ->
           mk_constr "Ignored_format_arg" [ mk_int_opt pad_opt; mk_fmtty fmtty ]
         | Ignored_format_subst (pad_opt, fmtty) ->
@@ -4128,8 +4128,8 @@ and type_format loc str env =
         | Float (fconv, pad, prec, rest) ->
           mk_constr "Float" [
             mk_fconv fconv; mk_padding pad; mk_precision prec; mk_fmt rest ]
-        | Bool rest ->
-          mk_constr "Bool" [ mk_fmt rest ]
+        | Bool (pad, rest) ->
+          mk_constr "Bool" [ mk_padding pad; mk_fmt rest ]
         | Flush rest ->
           mk_constr "Flush" [ mk_fmt rest ]
         | String_literal (s, rest) ->
@@ -5015,7 +5015,7 @@ and type_let ?(check = fun s -> Warnings.Unused_var s)
       l spat_sexp_list
   in
   if is_recursive then
-    List.iter 
+    List.iter
       (fun {vb_pat=pat} -> match pat.pat_desc with
            Tpat_var _ -> ()
          | Tpat_alias ({pat_desc=Tpat_any}, _, _) -> ()

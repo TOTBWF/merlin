@@ -59,3 +59,4 @@ let interface_suffix = ref ".mli"
 let max_tag = 245
 
 let safe_string = false
+let flat_float_array = false

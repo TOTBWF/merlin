@@ -199,12 +199,12 @@ case "$CMI_NUMBER" in
         OCAML_VERSION_MESSAGE="OCaml 4.05.0"
         OCAML_VERSION_VAL='`OCaml_4_05_0'
         ;;
-      "4.06."*)
-        OCAML_VERSION="406"
-        OCAML_VERSION_MESSAGE="OCaml 4.06.0"
-        OCAML_VERSION_VAL='`OCaml_4_06_0'
-        ;;
     esac;;
+  "Caml1999I022")
+    OCAML_VERSION="406"
+    OCAML_VERSION_MESSAGE="OCaml 4.06.0"
+    OCAML_VERSION_VAL='`OCaml_4_06_0'
+    ;;
 esac
 
 ## Findlib version check
